@@ -60,7 +60,7 @@ class Fetcher:
         return r
 
     def iter_pages(
-        self, url: str, max_pages: int = 1
+        self, url: str, max_pages: int = 1, start_page: int = 1
     ) -> Generator[Tuple[int, str], None, None]:
         proxies = (
             {"http://": self.proxy, "https://": self.proxy} if self.proxy else None
@@ -69,7 +69,7 @@ class Fetcher:
         with httpx.Client(
             http2=False, follow_redirects=True, proxies=proxies
         ) as client:
-            for pi in range(1, max_pages + 1):
+            for pi in range(start_page, start_page + max_pages):
                 u = self._next_url(url, pi)
                 resp = self._get(client, u)
                 yield pi, resp.text

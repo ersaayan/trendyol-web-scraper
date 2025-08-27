@@ -25,7 +25,7 @@ htmlcov/
 .ruff_cache/
 .tox/
 .cache/
-
+.checkpoints/
 # Build / Dist
 build/
 dist/
