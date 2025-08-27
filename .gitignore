@@ -1,0 +1,45 @@
+# OS / Editor
+.DS_Store
+.vscode/
+.idea/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+
+# Environment files
+.env
+.env.*
+
+# Test / Coverage / Linters
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.cache/
+
+# Build / Dist
+build/
+dist/
+*.egg-info/
+
+# PIP metadata
+pip-wheel-metadata/
+
+# Node (just in case)
+node_modules/
+
+# Project outputs
+output/
+logs/
+reports/
+*.csv
+*.ndjson
