@@ -3,3 +3,6 @@ selectolax==0.3.24
 tenacity==9.0.0
 tqdm==4.66.4
 pytest==8.3.2
+fastapi==0.111.1
+uvicorn[standard]==0.30.3
+openai==1.51.0

@@ -137,14 +137,51 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
                 log.info("Sayfa %d: yazılacak yeni ürün yok (tamamı duplike)", page_idx)
                 continue
 
+            # Max-items'e göre son batch'i kırp
+            if args.max_items is not None and total + len(to_write) > args.max_items:
+                remain = args.max_items - total
+                if remain <= 0:
+                    log.info("Max items sınırına ulaşıldı: %d", args.max_items)
+                    # checkpoint kaydet ve çık
+                    if args.checkpoint:
+                        save_checkpoint(
+                            Path(args.checkpoint),
+                            {
+                                "url": args.url,
+                                "nextPage": page_idx,
+                                "written": last_written,
+                                "out": str(out_path),
+                                "format": args.format,
+                            },
+                        )
+                    break
+                log.info(
+                    "Max-items nedeniyle parti kırpılıyor: orijinal=%d, yazılacak=%d",
+                    len(to_write),
+                    remain,
+                )
+                to_write = to_write[:remain]
+
             writer.write_many(to_write)
             total += len(to_write)
             last_written += len(to_write)
             log.info("Sayfa %d: yazıldı=%d, toplam=%d", page_idx, len(to_write), total)
 
-            # max-items sınırı
+            # max-items sınırı (yazımdan sonra kontrol, checkpoint'i kaydedip kır)
             if args.max_items is not None and total >= args.max_items:
                 log.info("Max items sınırına ulaşıldı: %d", args.max_items)
+                if args.checkpoint:
+                    save_checkpoint(
+                        Path(args.checkpoint),
+                        {
+                            "url": args.url,
+                            "nextPage": page_idx + 1,
+                            "written": last_written,
+                            "out": str(out_path),
+                            "format": args.format,
+                        },
+                    )
+                    log.debug("Checkpoint güncellendi: nextPage=%d", page_idx + 1)
                 break
 
             # checkpoint kaydet

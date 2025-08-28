@@ -26,6 +26,8 @@ htmlcov/
 .tox/
 .cache/
 .checkpoints/
+.logs/
+analysis/
 # Build / Dist
 build/
 dist/

@@ -13,6 +13,8 @@ Small, fast CLI to scrape products from Trendyol search/category listings (`/sr?
 - Checkpoint + resume support across runs
 - Basic logging with configurable level
 - Optional proxy and custom User-Agent
+- Built-in analysis CLI for profitability and price ladders
+- Optional LLM-powered insights (OpenAI) on analysis summary
 
 
 ## Install
@@ -74,6 +76,44 @@ Debug logs:
 python -m src.cli ... --log-level DEBUG
 ```
 
+### Analysis CLI
+
+Generate profitability summary and price recommendations:
+
+```bash
+python -m src.analyze \
+  --in output.ndjson \
+  --format ndjson \
+  --commission 12 \
+  --default-cost 80 \
+  --tiers '[{"up_to":150,"fee":42.7},{"up_to":300,"fee":72.2}]' \
+  --margins 5,10,15 \
+  --out-dir analysis
+```
+
+Enable LLM insights (requires environment variable OPENAI_API_KEY):
+
+```bash
+export OPENAI_API_KEY=sk-...   # set your key
+python -m src.analyze --in output.ndjson --format ndjson --commission 12 --default-cost 80 --use-llm --llm-model gpt-4o-mini
+```
+
+Outputs: `analysis/analysis-YYYYMMDD-HHMMSS.json` and `.md`. JSON includes an optional `llm` block.
+
+
+### Product Page (PDP) Scraper
+
+Scrape one or more product detail pages and write a line-delimited JSON file:
+
+```bash
+python -m src.pdp_cli \
+  --out pdp.ndjson \
+  --delay-ms 800 \
+  "https://www.trendyol.com/yatas/eco-touch-sivi-gecirmez-alez-p-214070920?boutiqueId=61&merchantId=106771"
+```
+
+Each line contains fields like: `productId, productCode, name, brand, price, rating, ratingCount, favoriteCount, categoryPath[], seller, sellerId, variants[], images[], badges[]`.
+
 
 ## Options (excerpt)
 
@@ -101,3 +141,16 @@ python -m src.cli ... --log-level DEBUG
 
 - Tests: `pytest -q`
 - Code: main entry is `src/cli.py`; HTTP in `src/fetch.py`; parser in `src/parse.py`.
+- Web UI: `uvicorn src.server:app --reload` then open <http://127.0.0.1:8000>. Start scrapes and analyses from the dashboard. Recent analyses are browsable and JSON entries can open an LLM summary modal.
+
+### API additions
+
+- Start PDP scrape job:
+  - POST `/api/pdp`
+  - Body: `{ "urls": ["https://..."], "out": "pdp.ndjson", "delay_ms": 800, "log_level": "INFO" }`
+  - Response: `{ job_id, pid }`
+
+### Environment
+
+- `OPENAI_API_KEY`: required if using `--use-llm`
+- `OPENAI_MODEL` (optional): default model if not passed via `--llm-model`

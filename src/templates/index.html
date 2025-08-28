@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Trendyol Scraper Dashboard</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
+    />
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <header class="app-header container">
+      <div class="brand">
+        <span class="logo">🛒</span>
+        <strong>Trendyol Scraper</strong>
+      </div>
+      <button id="theme-toggle" class="contrast outline">🌙 Karanlık</button>
+    </header>
+
+    <main class="container">
+      <nav class="tabs">
+        <a href="#scrape" data-tab="scrape" class="active">Scrape</a>
+        <a href="#analyze" data-tab="analyze">Analiz</a>
+        <a href="#pdp" data-tab="pdp">PDP</a>
+      </nav>
+
+      <div class="grid-2">
+        <!-- SCRAPE TAB -->
+        <section
+          id="tab-scrape"
+          class="card tab-pane active"
+          aria-hidden="false"
+        >
+          <h3>Yeni İş Başlat</h3>
+          <form id="job-form">
+            <div class="grid">
+              <label
+                >URL
+                <input
+                  name="url"
+                  type="url"
+                  required
+                  placeholder="https://www.trendyol.com/sr?..."
+                />
+              </label>
+              <label
+                >Maks Sayfa
+                <input name="max_pages" type="number" min="1" value="50" />
+              </label>
+              <label
+                >Maks Ürün (ops)
+                <input name="max_items" type="number" min="1" />
+              </label>
+            </div>
+            <div class="grid">
+              <label
+                >Çıktı
+                <input name="out" type="text" value="output-ui.ndjson" />
+              </label>
+              <label
+                >Format
+                <select name="fmt">
+                  <option value="ndjson" selected>ndjson</option>
+                  <option value="csv">csv</option>
+                </select>
+              </label>
+              <label
+                >Delay (ms)
+                <input name="delay_ms" type="number" value="800" />
+              </label>
+            </div>
+            <div class="grid">
+              <label
+                >Checkpoint
+                <input
+                  name="checkpoint"
+                  type="text"
+                  value=".checkpoints/ui.json"
+                />
+              </label>
+              <label
+                >Resume
+                <select name="resume">
+                  <option value="true" selected>Evet</option>
+                  <option value="false">Hayır</option>
+                </select>
+              </label>
+              <label
+                >Log Level
+                <select name="log_level">
+                  <option>INFO</option>
+                  <option>DEBUG</option>
+                  <option>WARNING</option>
+                  <option>ERROR</option>
+                  <option>CRITICAL</option>
+                </select>
+              </label>
+            </div>
+            <button id="job-submit" type="submit">Başlat</button>
+          </form>
+
+          <hr />
+          <div class="stats" role="region" aria-label="İş istatistikleri">
+            <div class="stat">
+              <div class="stat-label">Toplam İş</div>
+              <div id="stat-total" class="stat-value">0</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Çalışan</div>
+              <div id="stat-running" class="stat-value info">0</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Başarılı</div>
+              <div id="stat-succeeded" class="stat-value success">0</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Hatalı</div>
+              <div id="stat-failed" class="stat-value danger">0</div>
+            </div>
+          </div>
+
+          <h3>İşler</h3>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Durum</th>
+                  <th>PID</th>
+                  <th>Başlangıç</th>
+                  <th>Loglar</th>
+                </tr>
+              </thead>
+              <tbody id="jobs-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- PDP TAB -->
+        <section id="tab-pdp" class="card tab-pane" hidden aria-hidden="true">
+          <h3>PDP Scrape</h3>
+          <form id="pdp-form">
+            <label>
+              Ürün URL'leri (her satıra bir)
+              <textarea
+                name="urls"
+                rows="4"
+                placeholder="https://www.trendyol.com/....\nhttps://www.trendyol.com/..."
+                required
+              ></textarea>
+            </label>
+            <div class="grid">
+              <label>
+                Çıktı
+                <input name="out" type="text" value="pdp.ndjson" />
+              </label>
+              <label>
+                Delay (ms)
+                <input name="delay_ms" type="number" value="800" />
+              </label>
+              <label>
+                Log Level
+                <select name="log_level">
+                  <option>INFO</option>
+                  <option>DEBUG</option>
+                  <option>WARNING</option>
+                  <option>ERROR</option>
+                  <option>CRITICAL</option>
+                </select>
+              </label>
+            </div>
+            <button id="pdp-submit" type="submit">PDP İşini Başlat</button>
+          </form>
+
+          <hr />
+          <h3>Son PDP Çıktıları</h3>
+          <div class="grid">
+            <label>
+              Dosya
+              <select id="pdp-select"></select>
+            </label>
+            <label>
+              Listeyi Yenile
+              <button id="pdp-refresh" type="button" class="secondary">
+                Yenile
+              </button>
+            </label>
+            <label>
+              Önizleme (ilk 50)
+              <button id="pdp-preview" type="button" class="secondary">
+                Önizle
+              </button>
+            </label>
+            <label>
+              LLM Skorla
+              <button id="pdp-score" type="button" class="contrast">
+                Başlat
+              </button>
+            </label>
+          </div>
+          <div id="pdp-preview-table-wrap" class="table-wrap" hidden>
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Marka</th>
+                  <th>Ürün</th>
+                  <th>Fiyat</th>
+                  <th>Rating</th>
+                  <th>Satıcı</th>
+                  <th>Rozetler</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="pdp-table-body"></tbody>
+            </table>
+          </div>
+          <pre
+            id="pdp-preview-content"
+            class="log"
+            style="max-height: 30vh"
+          ></pre>
+
+          <hr />
+          <h3>Skor Önizleme</h3>
+          <div class="grid">
+            <label>
+              Seçili dosyanın -scored çıktısını önizle
+              <button id="pdp-preview-scored" type="button" class="secondary">
+                Skorları Önizle
+              </button>
+            </label>
+          </div>
+          <div id="pdp-scored-table-wrap" class="table-wrap" hidden>
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Marka</th>
+                  <th>Ürün</th>
+                  <th>product_score</th>
+                  <th>title_score</th>
+                  <th>category_fit</th>
+                  <th>compliance</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="pdp-scored-table-body"></tbody>
+            </table>
+          </div>
+          <pre
+            id="pdp-scored-preview-content"
+            class="log"
+            style="max-height: 30vh"
+          ></pre>
+        </section>
+
+        <!-- ANALYZE TAB -->
+        <section
+          id="tab-analyze"
+          class="card tab-pane"
+          hidden
+          aria-hidden="true"
+        >
+          <h3>Analiz</h3>
+          <form id="analyze-form">
+            <div class="grid">
+              <label
+                >Girdi Dosyası
+                <select name="inp" id="inp-select">
+                  <option value="" selected>Yükleniyor...</option>
+                </select>
+              </label>
+              <label
+                >Format
+                <select name="format">
+                  <option value="ndjson" selected>ndjson</option>
+                  <option value="csv">csv</option>
+                </select>
+              </label>
+              <label
+                >Komisyon (%)
+                <input name="commission" type="number" step="0.01" value="12" />
+              </label>
+            </div>
+            <div class="grid">
+              <label
+                >Varsayılan Maliyet (TL)
+                <input
+                  name="default_cost"
+                  type="number"
+                  step="0.01"
+                  value="80"
+                />
+              </label>
+              <label
+                >Kargo Baremleri (JSON)
+                <input
+                  name="tiers"
+                  type="text"
+                  value='[{"up_to":150,"fee":42.70},{"up_to":300,"fee":72.20}]'
+                />
+              </label>
+              <label
+                >Marjlar (%)
+                <input name="margins" type="text" value="5,10,15" />
+              </label>
+            </div>
+            <div class="grid">
+              <label
+                >Çıktı Klasörü
+                <input name="out_dir" type="text" value="analysis" />
+              </label>
+              <label
+                >LLM Kullan
+                <select name="use_llm">
+                  <option value="false" selected>Hayır</option>
+                  <option value="true">Evet</option>
+                </select>
+              </label>
+              <label
+                >LLM Model
+                <input name="llm_model" type="text" placeholder="gpt-4o-mini" />
+              </label>
+            </div>
+            <div class="grid">
+              <label
+                >Manuel Girdi
+                <input id="manual-toggle" type="checkbox" />
+              </label>
+              <label
+                >Dosya (manuel)
+                <input
+                  id="inp-manual"
+                  name="inp_manual"
+                  type="text"
+                  placeholder="output.ndjson"
+                  disabled
+                />
+              </label>
+              <label
+                >Listeyi Yenile
+                <button id="refresh-inputs" type="button" class="secondary">
+                  Yenile
+                </button>
+              </label>
+            </div>
+            <button id="analyze-submit" type="submit">Analizi Başlat</button>
+          </form>
+
+          <hr />
+          <h3>Raporlar</h3>
+          <ul id="recent-analysis" class="file-list"></ul>
+          <small class="muted"
+            >JSON öğelerine tıklayarak LLM özetini, MD öğelerine tıklayarak
+            Markdown önizlemeyi görün.</small
+          >
+        </section>
+      </div>
+
+      <dialog id="log-modal">
+        <article>
+          <header>
+            <strong id="log-title">Loglar</strong>
+            <button onclick="closeLogs()" class="secondary">Kapat</button>
+          </header>
+          <pre id="log-stdout" class="log"></pre>
+          <pre id="log-stderr" class="log error"></pre>
+        </article>
+      </dialog>
+
+      <dialog id="llm-modal">
+        <article>
+          <header>
+            <strong>LLM Özet</strong>
+            <div class="actions">
+              <button onclick="copyLLM()" class="secondary">Kopyala</button>
+              <button onclick="closeLLM()" class="secondary">Kapat</button>
+            </div>
+          </header>
+          <nav class="mini-tabs">
+            <button class="mini-tab active" data-target="llm-markdown">
+              Özet
+            </button>
+            <button class="mini-tab" data-target="llm-json">JSON</button>
+          </nav>
+          <div id="llm-markdown" class="markdown"></div>
+          <pre id="llm-json" class="log" hidden></pre>
+        </article>
+      </dialog>
+
+      <dialog id="md-modal">
+        <article>
+          <header>
+            <strong>Markdown Önizleme</strong>
+            <button onclick="closeMD()" class="secondary">Kapat</button>
+          </header>
+          <div id="md-content" class="markdown"></div>
+        </article>
+      </dialog>
+
+      <dialog id="json-modal">
+        <article>
+          <header>
+            <strong>JSON Detay</strong>
+            <button onclick="closeJSON()" class="secondary">Kapat</button>
+          </header>
+          <pre id="json-detail" class="log" style="max-height: 60vh"></pre>
+        </article>
+      </dialog>
+    </main>
+
+    <div
+      id="toast-container"
+      class="toast-container"
+      aria-live="polite"
+      aria-atomic="true"
+    ></div>
+
+    <script src="/static/main.js"></script>
+  </body>
+</html>

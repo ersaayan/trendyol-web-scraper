@@ -59,6 +59,19 @@ class Fetcher:
         r.raise_for_status()
         return r
 
+    def get_page(self, url: str) -> str:
+        """Fetch a single page and return response text."""
+        proxies = (
+            {"http://": self.proxy, "https://": self.proxy} if self.proxy else None
+        )
+        with httpx.Client(
+            http2=False, follow_redirects=True, proxies=proxies
+        ) as client:
+            resp = self._get(client, url)
+            # polite delay
+            time.sleep(max(0, self.delay_ms) / 1000.0)
+            return resp.text
+
     def iter_pages(
         self, url: str, max_pages: int = 1, start_page: int = 1
     ) -> Generator[Tuple[int, str], None, None]:
